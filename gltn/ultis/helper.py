@@ -65,6 +65,14 @@ def custom_blog_image_path(instance, filename, path='general'):
     return os.path.join(upload_path, new_filename)
 
 
+def custom_comment_image_path(instance, filename, path='general'):
+    instance_id = str(instance.id)
+    upload_path = os.path.join(f'blog_media/comment/images/{path}/', instance_id)
+
+    new_filename = f'{uuid.uuid4()}{os.path.splitext(filename)[1]}'
+    return os.path.join(upload_path, new_filename)
+
+
 def is_valid_image(image_field):
     try:
         return image_field and default_storage.exists(image_field.name)

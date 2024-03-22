@@ -3,7 +3,7 @@ from functools import partial
 
 from django.db import models
 from apps.user.models import CustomUser
-from ultis.helper import custom_blog_image_path
+from ultis.helper import custom_blog_image_path, custom_comment_image_path
 
 
 class BaseModel(models.Model):
@@ -27,7 +27,7 @@ class Blog(BaseModel):
 class Image(BaseModel):
     # id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     blog = models.ForeignKey(Blog, null=True, on_delete=models.CASCADE)
-    avatar_image_path = partial(custom_blog_image_path, path="avatar")
+    avatar_image_path = partial(custom_blog_image_path, path="image")
     avatar = models.ImageField(upload_to=avatar_image_path, null=True, blank=True)
 
 
@@ -40,3 +40,10 @@ class Comment(BaseModel):
     content = models.CharField(max_length=500)
     blog = models.ForeignKey(Blog, on_delete=models.CASCADE)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+
+
+class ImageComment(BaseModel):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE)
+    avatar_image_path = partial(custom_comment_image_path, path="image")
+    avatar = models.ImageField(upload_to=avatar_image_path, null=True, blank=True)
+

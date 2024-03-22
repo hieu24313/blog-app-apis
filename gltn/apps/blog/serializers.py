@@ -70,12 +70,12 @@ class LikeSerializer(serializers.ModelSerializer):
 
 class CommentSerializer(serializers.ModelSerializer):
     user = UserSerializer()
-    blog = GetBlogSerializer()
+    # blog = GetBlogSerializer()
 
     class Meta:
         model = Comment
         fields = ['id',
                   'content',
                   'user',
-                  'blog'
+                  # 'blog'
                   ]

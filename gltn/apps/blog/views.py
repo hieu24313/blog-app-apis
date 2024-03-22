@@ -94,10 +94,13 @@ class BlogDeleteAPIView(APIView):
     @api_decorator
     def delete(self, request, pk):
         blog = Blog.objects.get(id=pk, user=request.user)
-        images = Image.objects.filter(blog=blog)
+        # images = Image.objects.filter(blog=blog)
+        # likes = Like.objects.filter(blog=blog)
+        # comment = Comment.objects.filter(blog=blog)
         blog.delete()
-        images.delete()
-
+        # images.delete()
+        # likes.delete()
+        # comment.delete()
         return {}, 'Delete Blog Successful!', status.HTTP_204_NO_CONTENT
 
 
@@ -106,6 +109,7 @@ class LikeAPIView(APIView):
 
     @api_decorator
     def post(self, request, pk):
+
         blog = Blog.objects.get(id=pk)
         check_like = Like.objects.filter(blog=blog, user=request.user)
         if not check_like:
@@ -114,6 +118,7 @@ class LikeAPIView(APIView):
             serializer = LikeSerializer(like, context={'request': request})
             blog.count_like += 1
             blog.save()
+
             return serializer.data, 'Like successful!', status.HTTP_201_CREATED
         else:
             return {}, 'You has been Liked!', status.HTTP_400_BAD_REQUEST
@@ -122,10 +127,12 @@ class LikeAPIView(APIView):
     def delete(self, request, pk):
         blog = Blog.objects.get(id=pk)
         try:
+
             like = Like.objects.get(blog=blog, user=request.user)
             like.delete()
             blog.count_like -= 1
             blog.save()
+
             return {}, 'Unlike successful!', status.HTTP_204_NO_CONTENT
         except Exception as e:
             print(e)
@@ -153,6 +160,15 @@ class CommentAPIView(APIView):
         return serializer.data, 'Retrieve data successfully!', status.HTTP_200_OK
 
 
+class CommentInfoAPIView(APIView):
+
+    @api_decorator
+    def get(self, request, pk):
+        comment = Comment.objects.get(id=pk)
+        serializer = CommentSerializer(comment, context={'request': request})
+        return serializer.data, 'Retrieve data successfully!', status.HTTP_200_OK
+
+
 class CreateCommentAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -160,6 +176,38 @@ class CreateCommentAPIView(APIView):
     def post(self, request):
         content = request.data.get('content')
         blog_id = request.data.get('blog_id')
-        comment = Comment.objects.Create(user=request.user, blog_id=blog_id, content=content)
+
+        comment = Comment.objects.create(user=request.user, blog_id=blog_id, content=content)
+        serializer = CommentSerializer(comment, context={'request': request})
+
+        return serializer.data, 'Create comment successful!', status.HTTP_201_CREATED
+
+
+class UpdateCommentAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @api_decorator
+    def put(self, request, pk):
+        content = request.data.get('content')
+
+        comment = Comment.objects.get(id=pk, user=request.user)
+        comment.content = content
+        comment.save()
+
         serializer = CommentSerializer(comment, context={'request': request})
         return serializer.data, 'Create comment successful!', status.HTTP_201_CREATED
+
+
+class DelCommentAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @api_decorator
+    def delete(self, request, pk):
+        try:
+            comment = Comment.objects.get(id=pk, user=request.user)
+            comment.delete()
+            return {}, 'Delete comment successful!', status.HTTP_204_NO_CONTENT
+        except Exception as e:
+            print(e)
+            return {}, 'That is not you comment!', status.HTTP_400_BAD_REQUEST
+
