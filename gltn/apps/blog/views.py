@@ -2,6 +2,7 @@ from django.shortcuts import render
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ultis.api_helper import api_decorator
@@ -22,11 +23,12 @@ class BlogCreateAPIView(APIView):
         blog = Blog.objects.create(content=content, user=request.user)
         blog.save()
         list_Image = request.data.getlist('images')
-        data = [{'avatar': image, 'blog': blog.id} for image in list_Image]
-        serializer = ImageCreateSerializer(data=data, many=True, context={'request': request})
+        if list_Image:
+            data = [{'avatar': image, 'blog': blog.id} for image in list_Image]
+            serializer = ImageCreateSerializer(data=data, many=True, context={'request': request})
 
-        if serializer.is_valid(raise_exception=True):
-            serializer.save()
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
         return BlogSerializer(blog,
                               context={'request': request}).data, 'Create blog successful!', status.HTTP_201_CREATED
 
@@ -44,12 +46,34 @@ class BlogsAPIView(APIView):
 
 class BlogAPIView(APIView):
     permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
 
     @api_decorator
     def get(self, request, pk):
         blog = Blog.objects.get(id=pk)
+        liked = False
+        like = Like.objects.filter(blog=blog, user=request.user)
+        if like:
+            liked = True
         data = GetBlogSerializer(blog, context={'request': request}).data
+        data['liked'] = liked
         return data, 'Retrieve data successfully!', status.HTTP_200_OK
+
+
+class AddImgBlogAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @api_decorator
+    def post(self, request, pk):
+        blog = Blog.objects.get(id=pk)
+        list_image = request.data.getlist('images')
+        data = [{'avatar': image, 'blog': blog.id} for image in list_image]
+        serializer = ImageCreateSerializer(data=data, many=True, context={'request': request})
+
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+        data = BlogSerializer(blog, context={'request': request}).data
+        return data, 'Add images successful!', status.HTTP_200_OK
 
 
 class BlogUpdateAPIView(APIView):
@@ -94,13 +118,7 @@ class BlogDeleteAPIView(APIView):
     @api_decorator
     def delete(self, request, pk):
         blog = Blog.objects.get(id=pk, user=request.user)
-        # images = Image.objects.filter(blog=blog)
-        # likes = Like.objects.filter(blog=blog)
-        # comment = Comment.objects.filter(blog=blog)
         blog.delete()
-        # images.delete()
-        # likes.delete()
-        # comment.delete()
         return {}, 'Delete Blog Successful!', status.HTTP_204_NO_CONTENT
 
 
@@ -133,7 +151,7 @@ class LikeAPIView(APIView):
             blog.count_like -= 1
             blog.save()
 
-            return {}, 'Unlike successful!', status.HTTP_204_NO_CONTENT
+            return {}, 'Unlike successful!', status.HTTP_200_OK
         except Exception as e:
             print(e)
             return {}, 'You do not like yet!', status.HTTP_400_BAD_REQUEST

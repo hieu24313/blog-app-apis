@@ -17,9 +17,13 @@ Including another URLconf
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path, include
-
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 from gltn import settings
+from ultis.api_helper import api_decorator
+
 
 urlpatterns = [
     path('admin/', admin.site.urls),
