@@ -1,7 +1,9 @@
 from django.urls import path
 from .views import (BlogCreateAPIView, BlogsAPIView, BlogAPIView, BlogUpdateAPIView, BlogDeleteAPIView, LikeAPIView,
                     CountLikeAPIView, CommentAPIView, CommentInfoAPIView, CreateCommentAPIView, DelCommentAPIView,
-                    UpdateCommentAPIView, AddImgBlogAPIView)
+                    UpdateCommentAPIView, AddImgBlogAPIView, LikeCommentCreateAPIView, UnLikeCommentAPIView,
+                    ReplyCommentAPIView, CreateReplyCommentAPIView, DeleteReplyCommentAPIView,
+                    UpdateReplyCommentAPIView)
 
 urlpatterns = [
     path('blog/create/', BlogCreateAPIView.as_view()),
@@ -19,5 +21,14 @@ urlpatterns = [
     path('blog/comment/create/', CreateCommentAPIView.as_view()),
     path('blog/comment/update/<uuid:pk>/', UpdateCommentAPIView.as_view()),
     path('blog/comment/delete/<uuid:pk>/', DelCommentAPIView.as_view()),
+
+    path('blog/comment/like/<uuid:pk>/', LikeCommentCreateAPIView.as_view()),
+    path('blog/comment/unlike/<uuid:pk>/', UnLikeCommentAPIView.as_view()),
+
+    # --------------------chưa test-----------------
+    path('blog/reply/comment/', ReplyCommentAPIView.as_view()),
+    path('blog/reply/comment/create/', CreateReplyCommentAPIView.as_view()),
+    path('blog/reply/comment/delete/<uuid:pk>/', DeleteReplyCommentAPIView.as_view()),
+    path('blog/reply/comment/update/<uuid:pk>/', UpdateReplyCommentAPIView.as_view()),
 
 ]

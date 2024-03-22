@@ -40,10 +40,27 @@ class Comment(BaseModel):
     content = models.CharField(max_length=500)
     blog = models.ForeignKey(Blog, on_delete=models.CASCADE)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    count_like = models.PositiveIntegerField(default=0)
+
+
+class ReplyComment(BaseModel):
+    content = models.CharField(max_length=500)
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    count_like = models.PositiveIntegerField(default=0)
 
 
 class ImageComment(BaseModel):
     comment = models.ForeignKey(Comment, on_delete=models.CASCADE)
     avatar_image_path = partial(custom_comment_image_path, path="image")
     avatar = models.ImageField(upload_to=avatar_image_path, null=True, blank=True)
+
+
+class LikeComment(BaseModel):
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE)
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+
+
+
+
 

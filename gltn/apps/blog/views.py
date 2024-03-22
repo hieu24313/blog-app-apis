@@ -6,12 +6,12 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ultis.api_helper import api_decorator
-from .models import Blog, Image, Like, Comment
-from .serializers import BlogSerializer, ImageSerializer, ImageCreateSerializer, GetBlogSerializer, LikeSerializer, \
-    CommentSerializer
+from ultis.helper import CustomPagination
+from .models import Blog, Image, Like, Comment, ImageComment, LikeComment, ReplyComment
+from .serializers import BlogSerializer, ImageCreateSerializer, GetBlogSerializer, LikeSerializer, \
+    CommentSerializer, ImageCommentSerializer, LikeCommentSerializer, ReplyCommentSerializer
 
 
-# Create your views here.
 class BlogCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser]
@@ -52,8 +52,8 @@ class BlogAPIView(APIView):
     def get(self, request, pk):
         blog = Blog.objects.get(id=pk)
         liked = False
-        like = Like.objects.filter(blog=blog, user=request.user)
-        if like:
+        check_like = Like.objects.filter(blog=blog, user=request.user)
+        if check_like:
             liked = True
         data = GetBlogSerializer(blog, context={'request': request}).data
         data['liked'] = liked
@@ -94,7 +94,7 @@ class BlogUpdateAPIView(APIView):
         for image in images:
             is_del = True
             for id_image in id_images:
-                if image.id == id_image:
+                if str(id_image) == str(image.id):
                     is_del = False
                     break
             if is_del:
@@ -174,8 +174,12 @@ class CommentAPIView(APIView):
         queryset = Comment.objects.filter().order_by('-created_at')
         if blog_id:
             queryset = queryset.filter(blog_id=blog_id)
-        serializer = CommentSerializer(queryset, many=True, context={'request': request})
-        return serializer.data, 'Retrieve data successfully!', status.HTTP_200_OK
+        paginator = CustomPagination()
+        paginator.add_total_record(len(queryset))
+        result = paginator.paginate_queryset(queryset, request)
+        serializer = CommentSerializer(result, many=True, context={'request': request})
+        data = paginator.get_paginated_response(serializer.data).data
+        return data, 'Retrieve data successfully!', status.HTTP_200_OK
 
 
 class CommentInfoAPIView(APIView):
@@ -183,8 +187,14 @@ class CommentInfoAPIView(APIView):
     @api_decorator
     def get(self, request, pk):
         comment = Comment.objects.get(id=pk)
-        serializer = CommentSerializer(comment, context={'request': request})
-        return serializer.data, 'Retrieve data successfully!', status.HTTP_200_OK
+
+        data = CommentSerializer(comment, context={'request': request}).data
+        if request.user.is_anonymous:
+            pass
+        else:
+            check = LikeComment.objects.filter(comment=comment, user=request.user)
+            data['liked'] = len(check) > 0
+        return data, 'Retrieve data successfully!', status.HTTP_200_OK
 
 
 class CreateCommentAPIView(APIView):
@@ -194,8 +204,16 @@ class CreateCommentAPIView(APIView):
     def post(self, request):
         content = request.data.get('content')
         blog_id = request.data.get('blog_id')
-
         comment = Comment.objects.create(user=request.user, blog_id=blog_id, content=content)
+
+        list_Image = request.data.getlist('images')
+        if list_Image:
+            data = [{'avatar': image, 'comment': comment.id} for image in list_Image]
+            serializer = ImageCommentSerializer(data=data, many=True, context={'request': request})
+
+            if serializer.is_valid(raise_exception=True):
+                serializer.save()
+
         serializer = CommentSerializer(comment, context={'request': request})
 
         return serializer.data, 'Create comment successful!', status.HTTP_201_CREATED
@@ -212,8 +230,29 @@ class UpdateCommentAPIView(APIView):
         comment.content = content
         comment.save()
 
+        # xóa những ảnh không có trong list id
+        id_images = request.data.get('id_images').split(',')
+        images = ImageComment.objects.filter(comment=comment)
+        for image in images:
+            is_del = True
+            for id_image in id_images:
+                if str(id_image) == str(image.id):
+                    is_del = False
+                    break
+            if is_del:
+                print('xóa')
+                image.delete()
+
+        # lưu ảnh mới của blog được gửi lên
+        list_image = request.data.getlist('images')
+        data = [{'avatar': image, 'comment': comment.id} for image in list_image]
+
+        serializer = ImageCommentSerializer(data=data, many=True, context={'request': request})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+
         serializer = CommentSerializer(comment, context={'request': request})
-        return serializer.data, 'Create comment successful!', status.HTTP_201_CREATED
+        return serializer.data, 'Update comment successful!', status.HTTP_200_OK
 
 
 class DelCommentAPIView(APIView):
@@ -227,5 +266,96 @@ class DelCommentAPIView(APIView):
             return {}, 'Delete comment successful!', status.HTTP_204_NO_CONTENT
         except Exception as e:
             print(e)
-            return {}, 'That is not you comment!', status.HTTP_400_BAD_REQUEST
+            return {}, 'That is not your comment!', status.HTTP_400_BAD_REQUEST
+
+
+class LikeCommentCreateAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @api_decorator
+    def post(self, request, pk):
+        comment = Comment.objects.get(id=pk)
+        check = LikeComment.objects.filter(comment=comment, user=request.user)
+
+        if not check:
+            like_cmt = LikeComment.objects.create(comment=comment, user=request.user)
+            comment.count_like += 1
+            comment.save()
+            serializer = LikeCommentSerializer(like_cmt, context={'request': request})
+            return serializer.data, 'Like successful!', status.HTTP_201_CREATED
+        else:
+            return {}, 'Liked', status.HTTP_400_BAD_REQUEST
+
+
+class UnLikeCommentAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @api_decorator
+    def delete(self, request, pk):
+        comment = Comment.objects.get(id=pk)
+        comment.count_like -= 1
+        comment.save()
+        try:
+            like_cmt = LikeComment.objects.get(comment=comment, user=request.user)
+            like_cmt.delete()
+            return {}, 'Unlike successful!', status.HTTP_204_NO_CONTENT
+        except Exception as e:
+            print(e)
+            return {}, 'You do not like yet!', status.HTTP_400_BAD_REQUEST
+
+
+class ReplyCommentAPIView(APIView):
+
+    @api_decorator
+    def get(self, request):
+        comment_id = request.query_params.get('comment_id')
+        queryset = ReplyComment.objects.filter()
+
+        # if comment_id:
+        #     queryset = queryset.filter(comment_id=comment_id)
+        serializer = ReplyCommentSerializer(queryset, context={'request': request})
+        return serializer.data, 'Retrieve data successfully!', status.HTTP_200_OK
+
+
+class CreateReplyCommentAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @api_decorator
+    def post(self, request):
+        content = request.data.get('content')
+        comment_id = request.data.get('comment_id')
+        reply_comment = ReplyComment.objects.create(user=request.user, comment_id=comment_id, content=content)
+        serializer = ReplyCommentSerializer(reply_comment, context={'request': request})
+        return serializer.data, 'Reply comment successful!', status.HTTP_201_CREATED
+
+
+class DeleteReplyCommentAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @api_decorator
+    def delete(self, request, pk):
+        try:
+            reply_comment = ReplyComment.objects.get(user=request.user, id=pk)
+            reply_comment.delete()
+            return {}, 'Successful!', status.HTTP_204_NO_CONTENT
+        except Exception as e:
+            print(e)
+            return {}, 'That is not your comment!', status.HTTP_400_BAD_REQUEST
+
+
+class UpdateReplyCommentAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @api_decorator
+    def put(self, request, pk):
+        content = request.data.get('content')
+        try:
+            reply_comment = ReplyComment.objects.get(id=pk, user=request.user)
+            reply_comment.content = content
+            reply_comment.save()
+            serializer = ReplyCommentSerializer(reply_comment, context={'request': request})
+            return serializer.data, 'Update comment successful!', status.HTTP_200_OK
+        except Exception as e:
+            print(e)
+            return {}, 'That is not your comment!'
 

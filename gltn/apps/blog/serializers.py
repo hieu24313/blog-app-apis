@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Blog, Image, Like, Comment
+from .models import Blog, Image, Like, Comment, ImageComment, LikeComment, ReplyComment
 
 from apps.user.serializers import UserSerializer
 
@@ -68,8 +68,27 @@ class LikeSerializer(serializers.ModelSerializer):
                   ]
 
 
+class ImageCommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ImageComment
+        fields = ['id',
+                  'avatar',
+                  'comment'
+                  ]
+
+
+class GetImageCommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ImageComment
+        fields = ['id',
+                  'avatar',
+                  ]
+
+
 class CommentSerializer(serializers.ModelSerializer):
     user = UserSerializer()
+    image = GetImageCommentSerializer(source='imagecomment_set', many=True, read_only=True)
+
     # blog = GetBlogSerializer()
 
     class Meta:
@@ -77,5 +96,25 @@ class CommentSerializer(serializers.ModelSerializer):
         fields = ['id',
                   'content',
                   'user',
-                  # 'blog'
+                  'image',
+                  'count_like'
+                  ]
+
+
+class LikeCommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LikeComment
+        fields = ['id',
+                  'user',
+                  'comment']
+
+
+class ReplyCommentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReplyComment
+        fields = ['id',
+                  'content',
+                  'user',
+                  'count_like',
+                  'comment',
                   ]
