@@ -102,6 +102,10 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     def raw_phone_number(self):
         return str(self.phone_number) if self.phone_number else ""
 
+    # class Meta:
+    #     verbose_name = "User"
+    #     verbose_name_plural = "Users"
+
 
 class LetterAvatar(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

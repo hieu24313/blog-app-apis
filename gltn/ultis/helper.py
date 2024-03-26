@@ -60,7 +60,6 @@ def custom_user_image_path(instance, filename, path='general'):
 def custom_blog_image_path(instance, filename, path='general'):
     instance_id = str(instance.id)
     upload_path = os.path.join(f'blog_media/images/{path}/', instance_id)
-
     new_filename = f'{uuid.uuid4()}{os.path.splitext(filename)[1]}'
     return os.path.join(upload_path, new_filename)
 
@@ -69,6 +68,20 @@ def custom_comment_image_path(instance, filename, path='general'):
     instance_id = str(instance.id)
     upload_path = os.path.join(f'blog_media/comment/images/{path}/', instance_id)
 
+    new_filename = f'{uuid.uuid4()}{os.path.splitext(filename)[1]}'
+    return os.path.join(upload_path, new_filename)
+
+
+def custom_media_file_path(instance, filename, path='general'):
+    instance_id = str(instance.id)
+    upload_path = os.path.join(f'blog_media/blog/file/{path}/', instance_id)
+    new_filename = f'{uuid.uuid4()}{os.path.splitext(filename)[1]}'
+    return os.path.join(upload_path, new_filename)
+
+
+def custom_media_img_path(instance, filename, path='general'):
+    instance_id = str(instance.id)
+    upload_path = os.path.join(f'blog_media/blog/images_blog/{path}/', instance_id)
     new_filename = f'{uuid.uuid4()}{os.path.splitext(filename)[1]}'
     return os.path.join(upload_path, new_filename)
 

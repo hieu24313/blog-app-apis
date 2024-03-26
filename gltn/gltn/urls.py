@@ -28,7 +28,7 @@ from ultis.api_helper import api_decorator
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/auth/', include('apps.user.urls')),
-    path('api/', include('apps.blog.urls')),
+    path('api/blog/', include('apps.blog.urls')),
 ]
 
 if settings.DEBUG:

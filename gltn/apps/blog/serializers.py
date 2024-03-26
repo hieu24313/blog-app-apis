@@ -1,6 +1,8 @@
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 
-from .models import Blog, Image, Like, Comment, ImageComment, LikeComment, ReplyComment
+from ultis.file_helper import convert_file, file_size_in_mb
+from .models import Blog, Image, Like, Comment, ImageComment, LikeComment, ReplyComment, FileUpload, BlogImage
 
 from apps.user.serializers import UserSerializer
 
@@ -13,9 +15,44 @@ class ImageSerializer(serializers.ModelSerializer):
                   ]
 
 
+class FileSerializer(serializers.ModelSerializer):
+    # blog = BlogSerializerForImg()
+    # image = GetImageUploadSerializer()
+
+    class Meta:
+        model = BlogImage
+        fields = ['blog', 'image']
+
+
+class ImageUploadSerializer(serializers.ModelSerializer):
+    created_at = serializers.DateTimeField(format="%d/%m/%Y-%H:%M:%S", read_only=True)
+
+    class Meta:
+        model = FileUpload
+        fields = ['id',
+                  'owner',
+                  'file',
+                  'file_content_type',
+                  'file_name',
+                  'file_size',
+                  'created_at']
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        data['file_size'] = file_size_in_mb(instance.file.size)
+        # data['file'] = str(instance.file.url)
+        data['file_url'] = self.context['request'].build_absolute_uri(data['file'])
+        data['file_name'] = instance.file.name
+
+        return data
+
+
 class BlogSerializer(serializers.ModelSerializer):
     # user = UserSerializer()
-    image = ImageSerializer(source='image_set', many=True, read_only=True)
+    # image = ImageSerializer(source='image_set', many=True, read_only=True)
+    # image = ImageUploadSerializer(source='blogimage_set__image', many=True, read_only=True)
+    created_at = serializers.DateTimeField(format="%d/%m/%Y-%H:%M:%S", read_only=True)
+    updated_at = serializers.DateTimeField(format="%d/%m/%Y-%H:%M:%S", read_only=True)
 
     class Meta:
         model = Blog
@@ -24,13 +61,20 @@ class BlogSerializer(serializers.ModelSerializer):
                   'user',
                   'created_at',
                   'updated_at',
-                  'image',
+                  # 'image',
                   'count_like'
                   ]
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+
+        data['image'] = ImageUploadSerializer(FileUpload.objects.filter(blogimage__blog=instance), many=True, context=
+                                                                                            self.context).data
+        return data
+
 
 class GetBlogSerializer(serializers.ModelSerializer):
-    image = ImageSerializer(source='image_set', many=True, read_only=True)
+    # image = ImageSerializer(source='image_set', many=True, read_only=True)
     created_at = serializers.DateTimeField(format="%d/%m/%Y-%H:%M:%S", read_only=True)
     updated_at = serializers.DateTimeField(format="%d/%m/%Y-%H:%M:%S", read_only=True)
 
@@ -40,7 +84,7 @@ class GetBlogSerializer(serializers.ModelSerializer):
                   'content',
                   'created_at',
                   'updated_at',
-                  'image',
+                  # 'image',
                   'count_like'
                   ]
 
@@ -118,3 +162,58 @@ class ReplyCommentSerializer(serializers.ModelSerializer):
                   'count_like',
                   'comment',
                   ]
+
+
+# class BlogSerializer(serializers.ModelSerializer):
+#     # user = UserSerializer()
+#     image = ImageSerializer(source='image_set', many=True, read_only=True)
+#
+#     class Meta:
+#         model = Blog
+#         fields = ['id',
+#                   'content',
+#                   'user',
+#                   'created_at',
+#                   'updated_at',
+#                   'image',
+#                   'count_like'
+#                   ]
+
+
+class GetImageUploadSerializer(serializers.ModelSerializer):
+    created_at = serializers.DateTimeField(format="%d/%m/%Y-%H:%M:%S", read_only=True)
+
+    class Meta:
+        model = FileUpload
+        fields = ['id',
+                  'owner',
+                  'file',
+                  'file_content_type',
+                  'file_name',
+                  'file_size',
+                  'created_at']
+
+
+class BlogSerializerForImg(serializers.ModelSerializer):
+    # user = UserSerializer()
+    # image = ImageSerializer(source='image_set', many=True, read_only=True)
+
+    class Meta:
+        model = Blog
+        fields = ['id',
+                  'content',
+                  'user',
+                  'created_at',
+                  'updated_at',
+                  'image',
+                  'count_like'
+                  ]
+
+
+class BlogImgSerializer(serializers.ModelSerializer):
+    # blog = BlogSerializerForImg()
+    # image = GetImageUploadSerializer()
+
+    class Meta:
+        model = BlogImage
+        fields = ['blog', 'image']

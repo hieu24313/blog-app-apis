@@ -1,20 +1,22 @@
 from django.shortcuts import render
 from rest_framework import status
-from rest_framework.parsers import MultiPartParser
+from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from ultis.api_helper import api_decorator
 from ultis.helper import CustomPagination
-from .models import Blog, Image, Like, Comment, ImageComment, LikeComment, ReplyComment
+from .models import Blog, Image, Like, Comment, ImageComment, LikeComment, ReplyComment, BlogImage, FileUpload
 from .serializers import BlogSerializer, ImageCreateSerializer, GetBlogSerializer, LikeSerializer, \
-    CommentSerializer, ImageCommentSerializer, LikeCommentSerializer, ReplyCommentSerializer
+    CommentSerializer, ImageCommentSerializer, LikeCommentSerializer, ReplyCommentSerializer, ImageUploadSerializer, \
+    GetImageUploadSerializer, BlogImgSerializer
 
 
 class BlogCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
-    parser_classes = [MultiPartParser]
+
+    # parser_classes = [MultiPartParser]
 
     @api_decorator
     def post(self, request):
@@ -22,25 +24,28 @@ class BlogCreateAPIView(APIView):
 
         blog = Blog.objects.create(content=content, user=request.user)
         blog.save()
-        list_Image = request.data.getlist('images')
+        list_Image = request.data.get('images').split(',')
         if list_Image:
-            data = [{'avatar': image, 'blog': blog.id} for image in list_Image]
-            serializer = ImageCreateSerializer(data=data, many=True, context={'request': request})
+            data = [{'image': image, 'blog': blog.id} for image in list_Image]
+            serializer = BlogImgSerializer(data=data, many=True, context={'request': request})
 
             if serializer.is_valid(raise_exception=True):
                 serializer.save()
-        return BlogSerializer(blog,
-                              context={'request': request}).data, 'Create blog successful!', status.HTTP_201_CREATED
+        data = BlogSerializer(blog, context={'request': request}).data
+        queryset_img = FileUpload.objects.filter(id__in=list_Image)
+        serializer_img = GetImageUploadSerializer(queryset_img, many=True, context={'request': request}).data
+        data['image'] = serializer_img
+        return data, 'Create blog successful!', status.HTTP_201_CREATED
 
 
 class BlogsAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
 
     @api_decorator
     def get(self, request):
-        queryset = Blog.objects.filter(user=request.user, is_active=True).order_by('-created_at')
+        queryset = Blog.objects.filter().order_by('-created_at')
 
-        data = GetBlogSerializer(queryset, many=True, context={'request': request}).data
+        data = BlogSerializer(queryset, many=True, context={'request': request}).data
         return data, 'Retrieve data successfully!', status.HTTP_200_OK
 
 
@@ -51,6 +56,7 @@ class BlogAPIView(APIView):
     @api_decorator
     def get(self, request, pk):
         blog = Blog.objects.get(id=pk)
+        print(blog)
         liked = False
         check_like = Like.objects.filter(blog=blog, user=request.user)
         if check_like:
@@ -90,11 +96,11 @@ class BlogUpdateAPIView(APIView):
 
         # xóa những ảnh không có trong list id
         id_images = request.data.get('id_images').split(',')
-        images = Image.objects.filter(blog=blog)
+        images = BlogImage.objects.filter(blog=blog)
         for image in images:
             is_del = True
             for id_image in id_images:
-                if str(id_image) == str(image.id):
+                if str(id_image) == str(image.image.id):
                     is_del = False
                     break
             if is_del:
@@ -359,3 +365,67 @@ class UpdateReplyCommentAPIView(APIView):
             print(e)
             return {}, 'That is not your comment!'
 
+
+class UploadFileAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+    parser_classes = [MultiPartParser]
+
+    @api_decorator
+    def post(self, request, *args, **kwargs):
+        data = request.data.copy()
+        data['owner'] = str(request.user.id)
+
+        # data = {'file': request.data.get('file')}
+        # print(request.data.get('file'))
+        # file_upload = FileUpload.objects.create(owner=request.user, file=request.data.get('file'))
+        serializer = ImageUploadSerializer(data=data,
+                                           context={'request': request})
+        if serializer.is_valid(raise_exception=True):
+            serializer.save()
+            # serializer = ImageUploadSerializer(file_upload)
+            return serializer.data, 'Upload successful!', status.HTTP_201_CREATED
+
+
+class GetImgUser(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @api_decorator
+    def get(self, request):
+        queryset = FileUpload.objects.all(owner=request.user)
+        serializer = GetImageUploadSerializer(queryset, many=True,
+                                              context={'request': request})
+        return serializer.data, 'All image!', status.HTTP_200_OK
+
+
+class AddImgForBlog(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @api_decorator
+    def post(self, request, pk):
+        blog = Blog.objects.get(id=pk)
+        image_id = request.data.get('image')
+        file = FileUpload.objects.get(id=image_id)
+
+        blog_img = BlogImage.objects.create(blog=blog, image=file)
+        serializer = BlogImgSerializer(blog_img)
+        return serializer.data, 'Add Image For Blog Successful!', status.HTTP_201_CREATED
+
+
+class HistoryBlogAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @api_decorator
+    def get(self, request):
+        blog = Blog.objects.filter(user=request.user)
+        serializer = BlogSerializer(blog, many=True, context={'request': request})
+        return serializer.data, 'My history blog!', status.HTTP_200_OK
+
+
+class HistoryLikeAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @api_decorator
+    def get(self, request):
+        liked = Like.objects.filter(user=request.user)
+        serializer = LikeSerializer(liked, many=True, context={'request': request})
+        return serializer.data, 'History Like!', status.HTTP_200_OK

@@ -3,32 +3,40 @@ from .views import (BlogCreateAPIView, BlogsAPIView, BlogAPIView, BlogUpdateAPIV
                     CountLikeAPIView, CommentAPIView, CommentInfoAPIView, CreateCommentAPIView, DelCommentAPIView,
                     UpdateCommentAPIView, AddImgBlogAPIView, LikeCommentCreateAPIView, UnLikeCommentAPIView,
                     ReplyCommentAPIView, CreateReplyCommentAPIView, DeleteReplyCommentAPIView,
-                    UpdateReplyCommentAPIView)
+                    UpdateReplyCommentAPIView, UploadFileAPIView, AddImgForBlog, GetImgUser, HistoryBlogAPIView,
+                    HistoryLikeAPIView)
 
 urlpatterns = [
-    path('blog/create/', BlogCreateAPIView.as_view()),
+    path('create/', BlogCreateAPIView.as_view()),
     path('blogs/', BlogsAPIView.as_view()),
-    path('blog/<uuid:pk>/', BlogAPIView.as_view()),
-    path('blog/update/<uuid:pk>/', BlogUpdateAPIView.as_view()),
-    path('blog/delete/<uuid:pk>/', BlogDeleteAPIView.as_view()),
-    path('blog/image/add/<uuid:pk>/', AddImgBlogAPIView.as_view()),
+    path('<uuid:pk>/', BlogAPIView.as_view()),
+    path('update/<uuid:pk>/', BlogUpdateAPIView.as_view()),
+    path('delete/<uuid:pk>/', BlogDeleteAPIView.as_view()),
+    path('image/add/<uuid:pk>/', AddImgBlogAPIView.as_view()),# add ảnh mới
+    path('add/images/<uuid:pk>/', AddImgForBlog.as_view()),# add ảnh có sẵn trên server
+    path('history/', HistoryBlogAPIView.as_view()),
 
-    path('blog/like/<uuid:pk>/', LikeAPIView.as_view()),
-    path('blog/like/count/<uuid:pk>/', CountLikeAPIView.as_view()),
+    path('like/<uuid:pk>/', LikeAPIView.as_view()),
+    path('like/count/<uuid:pk>/', CountLikeAPIView.as_view()),
+    path('like/history/', HistoryLikeAPIView.as_view()),
 
-    path('blog/comments/', CommentAPIView.as_view()),
-    path('blog/comment/<uuid:pk>/', CommentInfoAPIView.as_view()),
-    path('blog/comment/create/', CreateCommentAPIView.as_view()),
-    path('blog/comment/update/<uuid:pk>/', UpdateCommentAPIView.as_view()),
-    path('blog/comment/delete/<uuid:pk>/', DelCommentAPIView.as_view()),
+    path('comments/', CommentAPIView.as_view()),
+    path('comment/<uuid:pk>/', CommentInfoAPIView.as_view()),
+    path('comment/create/', CreateCommentAPIView.as_view()),
+    path('comment/update/<uuid:pk>/', UpdateCommentAPIView.as_view()),
+    path('comment/delete/<uuid:pk>/', DelCommentAPIView.as_view()),
 
-    path('blog/comment/like/<uuid:pk>/', LikeCommentCreateAPIView.as_view()),
-    path('blog/comment/unlike/<uuid:pk>/', UnLikeCommentAPIView.as_view()),
+    path('comment/like/<uuid:pk>/', LikeCommentCreateAPIView.as_view()),
+    path('comment/unlike/<uuid:pk>/', UnLikeCommentAPIView.as_view()),
+
+    path('file/', UploadFileAPIView.as_view()),
+    path('all/image/', GetImgUser.as_view()),
 
     # --------------------chưa test-----------------
-    path('blog/reply/comment/', ReplyCommentAPIView.as_view()),
-    path('blog/reply/comment/create/', CreateReplyCommentAPIView.as_view()),
-    path('blog/reply/comment/delete/<uuid:pk>/', DeleteReplyCommentAPIView.as_view()),
-    path('blog/reply/comment/update/<uuid:pk>/', UpdateReplyCommentAPIView.as_view()),
+    path('reply/comment/', ReplyCommentAPIView.as_view()),
+    path('reply/comment/create/', CreateReplyCommentAPIView.as_view()),
+    path('reply/comment/delete/<uuid:pk>/', DeleteReplyCommentAPIView.as_view()),
+    path('reply/comment/update/<uuid:pk>/', UpdateReplyCommentAPIView.as_view()),
+
 
 ]
